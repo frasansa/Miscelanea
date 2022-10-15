@@ -3,5 +3,7 @@
 # gitcreds::gitcreds_get()
 
 usethis::create_from_github(
-  "https://github.com/frasansa/Scripts.git",
-  destdir = file.path("d:", "R_Projects"))
+  "https://github.com/frasansa/Miscelanea.git",
+  # destdir = file.path("d:", "R_Projects") FIS193
+  destdir = file.path("c:", "Users", "fcosa", "Desktop", "GIT_Projects")
+)
