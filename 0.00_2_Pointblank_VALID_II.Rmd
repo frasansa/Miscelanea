@@ -1,0 +1,151 @@
+---
+title: "Pointblank Features: Valid II"
+author: "FISABIO"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document: 
+    theme: cerulean
+    highlight: breezedark
+    css: D:\Users\20833717H\Desktop\R_Projects\Opioids\Documentos\style.css
+    toc: yes
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+      code_folding: "none"
+
+---
+
+<img src="D:/Users/20833717H/Desktop/R_Projects/Opioids/logos/logo.png" style="position:absolute;top:200px;right:0px;" />
+
+
+```{css, echo=FALSE}
+#header .btn-group {
+    display: none;
+}
+
+```
+
+```{r setup, include=FALSE, echo=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# load libraries and functions-------------------------------------------------
+source(file.path("..", "scripts", "Librerias.R"))
+source(file.path("..", "scripts", "Funciones.R"))
+
+```
+
+```{r definir_plot, echo=FALSE, warning=FALSE, message=FALSE}
+# Custom ggplot2 theme---------------------------------------------------------
+theme_set(theme_bw())
+tema_azul <- theme_update(
+  plot.background = element_rect(fill = "aliceblue", colour = "black"),
+  strip.background = element_rect(colour = "black", fill = "white"))
+
+# Define zero days-------------------------------------------------------------
+zero_days = difftime(ymd("2000-01-01"), ymd("2000-01-01"), units = "days")
+
+```
+
+# Pointblank: VALID-II
+
+```{r}
+# pointblank-------------------------------------------------------------------
+small_table
+
+```
+
+```{r}
+# Valid-II example-------------------------------------------------------------
+small_table %>%
+  col_is_posix(vars(date_time)) %>%
+  col_vals_in_set(vars(f), set = c("low", "mid", "high")) %>%
+  col_vals_lt(vars(a), value = 10) %>%
+  col_vals_regex(vars(b), regex = "^[0-9]-[a-z]{3}-[0-9]{3}$") %>%
+  col_vals_between(vars(d), left = 0, right = 5000)
+
+```
+
+```{r}
+# Valid-II example expanded----------------------------------------------------
+small_table %>%
+  col_is_posix(
+    vars(date_time),
+    actions = stop_on_fail(stop_at = 1)
+  ) %>%
+  col_vals_in_set(
+    vars(f), set = c("low", "mid", "high"),
+    actions = stop_on_fail(stop_at = 1)
+  ) %>%
+  col_vals_lt(
+    vars(a), value = 10,
+    actions = stop_on_fail(stop_at = 1)
+  ) %>%
+  col_vals_regex(
+    vars(b), regex = "^[0-9]-[a-z]{3}-[0-9]{3}$",
+    actions = stop_on_fail(stop_at = 1)
+  ) %>%
+  col_vals_between(
+    vars(d), left = 0, right = 5000,
+    actions = stop_on_fail(stop_at = 1)
+  )
+
+```
+
+```{r}
+# warn in action (no stop)-----------------------------------------------------
+small_table %>%
+  col_is_posix(
+    vars(date_time),
+    actions = warn_on_fail()
+  ) %>%
+  col_vals_in_set(
+    vars(f), set = c("low", "mid", "high"),
+    actions = warn_on_fail(warn_at = 0.2)
+  ) %>%
+  col_vals_lt(
+    vars(a), value = 10,
+    actions = warn_on_fail(warn_at = 3)
+  ) %>%
+  col_vals_regex(
+    vars(b), regex = "^[0-9]-[a-z]{3}-[0-9]{3}$",
+    actions = warn_on_fail(warn_at = 0.2)
+  ) %>%
+  col_vals_between(
+    vars(d), left = 0, right = 5000,
+    actions = warn_on_fail(warn_at = 1)
+  )
+
+```
+
+```{r}
+# actions levels
+al <- 
+  action_levels(
+    warn_at = 0.1,
+    stop_at = 0.2,
+    notify_at = 0.3,
+    fns = list(
+      warn = ~ warning("WARN threshold exceeded."),
+      stop = ~ stop("STOP threshold exceeded."),
+      notify = ~ log4r_step(x)
+    )
+  )
+al
+
+```
+
+```{r}
+# al in action
+small_table %>%
+  col_is_posix(vars(date_time), actions = al) %>%
+  col_vals_in_set(vars(f), set = c("low", "mid"), actions = al) %>%
+  col_vals_lt(vars(a), value = 7, actions = al) %>%
+  col_vals_regex(vars(b), regex = "^[0-9]-[a-w]{3}-[2-9]{3}$", actions = al) %>%
+  col_vals_between(vars(d), left = 0, right = 4000, actions = al)
+
+```
+
+```{r}
+readLines("pb_log_file")
+
+```
+

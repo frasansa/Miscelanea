@@ -1,0 +1,178 @@
+---
+title: "Eff_Prog_T2"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Cargar librerías, funciones y Paths------------------------------------------
+w_dir <- file.path( "d:", "Users", "20833717H", "Desktop", "R_Projects")
+source(file.path(w_dir, "opioids", "scripts", "Funciones_Bases_de_Datos.R"))
+
+```
+
+# T2
+
+```{r}
+
+x = 1:10
+
+microbenchmark::microbenchmark(x + 1, for(i in seq_len(10))  x[i] + 1)
+
+```
+
+```{r}
+
+n = 100
+
+method1 = function(n) {
+  vec = NULL # Or vec = c()
+  for(i in seq_len(n))
+    vec = c(vec, i)
+  vec
+}
+
+method2 = function(n) {
+  vec = numeric(n)
+  for(i in seq_len(n))
+    vec[i] = i
+  vec
+}
+
+method3 = function(n) seq_len(n)
+
+  microbenchmark(times = 100, unit = "s", 
+               method1(n), method2(n), method3(n))
+
+```
+
+```{r}
+
+monte_carlo = function(N) {
+  hits = 0
+  for (i in seq_len(N)) {
+    u1 = runif(1)
+    u2 = runif(1)
+    if (u1 ^ 2 > u2)
+      hits = hits + 1
+  }
+  return(hits / N)
+}
+
+N = 500000
+
+system.time(monte_carlo(N))
+
+
+monte_carlo_vec = function(N) sum(runif(N)^2 > runif(N))/N
+
+microbenchmark(times = 100, unit = "s", 
+               monte_carlo, monte_carlo_vec)
+
+```
+
+```{r}
+good = try(1 + 1, silent = TRUE)
+
+bad = try(1 + "1", silent = TRUE)
+
+1 + "1"
+
+if(class(bad) == "try-error")
+
+getS3method("print", "difftime")
+
+x = 1:5
+y = 2:6
+
+regression_plot = function(x, y, ...) {
+  # Plot and pass additional arguments to default plot method
+  plot(x, y, ...) 
+  
+  # Fit regression model 
+  model = lm(y ~ x)
+
+  # Add line of best fit to the plot
+  abline(model)
+  invisible(model)
+}
+
+a <- regression_plot(x, y)
+
+out <- hist(x)
+
+install.packages("pryr")
+install.packages("memoise")
+
+a <- c("a", "b", "c")
+b <- as_factor(a)
+
+pryr::object_size(a)
+pryr::object_size(b)
+
+install.packages("ggplot2movies")
+
+data(movies, package = "ggplot2movies")
+# MARGIN=1: corresponds to rows
+ratings = movies[, 7:16]
+
+popular = apply(ratings, 1, nnet::which.is.max)
+plot(table(popular))
+
+popular2 = apply(ratings, 1, which.max)
+plot(table(popular2))
+
+t <- tibble(x, y)
+
+flatten_int(t)
+
+```
+
+```{r}
+plot_mpg = function(row_to_remove) {
+  data(mpg, package = "ggplot2")
+  mpg = mpg[-row_to_remove, ]
+  plot(mpg$cty, mpg$hwy)
+  lines(lowess(mpg$cty, mpg$hwy), col = 2)
+}
+
+m_plot_mpg = memoise::memoise(plot_mpg)
+microbenchmark(times = 10, unit = "ms", m_plot_mpg(10), plot_mpg(10))
+
+vignette("memoise")
+
+```
+
+```{r}
+stop_watch = function() {
+  start_time = stop_time = lap_time = NULL
+  start = function() start_time <<- Sys.time()
+  lap = function() {
+  if (is.null(lap_time)) lap_time_0 <- start_time
+  else lap_time_0 <- lap_time
+  lap_time <<- Sys.time()
+    difftime(lap_time, lap_time_0)  
+  }
+  stop = function() {
+    stop_time <<- Sys.time()
+    difftime(stop_time, start_time)
+  }
+  
+  list(start = start, stop = stop, lap = lap)
+}
+
+watch = stop_watch()
+
+watch$start()
+
+watch$lap()
+
+
+watch$stop()
+
+
+```
+
+
+
+

@@ -1,0 +1,21 @@
+---
+title: "Pruebas"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(praise)
+
+```
+
+```{r}
+template <- "${Exclamation}! You have done this ${adverb_manner}!"
+
+praise(template)
+
+```
+

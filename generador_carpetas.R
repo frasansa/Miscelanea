@@ -1,0 +1,6 @@
+dir.create('scripts')
+dir.create('figuras')
+dir.create('informes')
+dir.create('datos')
+dir.create('datos/brutos')
+dir.create('datos/procesados')

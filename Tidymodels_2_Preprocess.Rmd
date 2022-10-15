@@ -1,0 +1,240 @@
+---
+title: "Tidymodels"
+output: html_document
+---
+
+
+```{r setup, include=FALSE, echo=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+# Cargar librerías, funciones y Paths------------------------------------------
+w_dir <- file.path( "d:", "Users", "20833717H", "Desktop", "R_Projects")
+source(file.path(w_dir, "Opioids", "Scripts", "Funciones_Bases_de_Datos.R"))
+
+```
+
+```{r definir_plot, echo=FALSE, warning=FALSE, message=FALSE}
+# definir el estilo de los gráficos--------------------------------------------
+theme_set(theme_bw())
+tema_azul <- theme_update(
+  plot.background = element_rect(fill = "lightblue", colour = NA))
+
+# defnir cero días-------------------------------------------------------------
+zero_days = difftime(ymd("2000-01-01"), ymd("2000-01-01"), units = "days")
+
+```
+
+```{r}
+# cargar base -----------------------------------------------------------------
+library(nycflights13)
+
+```
+
+```{r}
+set.seed(123)
+
+flight_data <- 
+  flights %>% 
+  mutate(
+    # Convert the arrival delay to a factor
+    arr_delay = ifelse(arr_delay >= 30, "late", "on_time"),
+    arr_delay = factor(arr_delay),
+    # We will use the date (not date-time) in the recipe below
+    date = as.Date(time_hour)
+  ) %>% 
+  # Include the weather data
+  inner_join(weather, by = c("origin", "time_hour")) %>% 
+  # Only retain the specific columns we will use
+  select(dep_time, flight, origin, dest, air_time, distance, 
+         carrier, date, arr_delay, time_hour) %>% 
+  # Exclude missing data
+  na.omit() %>% 
+  # For creating models, it is better to have qualitative columns
+  # encoded as factors (instead of character strings)
+  mutate_if(is.character, as.factor)
+
+```
+
+```{r}
+flight_data %>% 
+  count(arr_delay) %>% 
+  mutate(prop = n/sum(n))
+#> # A tibble: 2 x 3
+#>   arr_delay      n  prop
+#>   <fct>      <int> <dbl>
+#> 1 late       52540 0.161
+#> 2 on_time   273279 0.839
+
+```
+
+```{r}
+glimpse(flight_data)
+#> Rows: 325,819
+#> Columns: 10
+#> $ dep_time  <int> 517, 533, 542, 544, 554, 554, 555, 557, 557, 558, 558, 558,…
+#> $ flight    <int> 1545, 1714, 1141, 725, 461, 1696, 507, 5708, 79, 301, 49, 7…
+#> $ origin    <fct> EWR, LGA, JFK, JFK, LGA, EWR, EWR, LGA, JFK, LGA, JFK, JFK,…
+#> $ dest      <fct> IAH, IAH, MIA, BQN, ATL, ORD, FLL, IAD, MCO, ORD, PBI, TPA,…
+#> $ air_time  <dbl> 227, 227, 160, 183, 116, 150, 158, 53, 140, 138, 149, 158, …
+#> $ distance  <dbl> 1400, 1416, 1089, 1576, 762, 719, 1065, 229, 944, 733, 1028…
+#> $ carrier   <fct> UA, UA, AA, B6, DL, UA, B6, EV, B6, AA, B6, B6, UA, UA, AA,…
+#> $ date      <date> 2013-01-01, 2013-01-01, 2013-01-01, 2013-01-01, 2013-01-01…
+#> $ arr_delay <fct> on_time, on_time, late, on_time, on_time, on_time, on_time,…
+#> $ time_hour <dttm> 2013-01-01 05:00:00, 2013-01-01 05:00:00, 2013-01-01 05:00…
+
+```
+```{r}
+flight_data %>% 
+  skimr::skim(dest, carrier) 
+
+```
+
+```{r}
+# Fix the random numbers by setting the seed 
+# This enables the analysis to be reproducible when random numbers are used 
+set.seed(555)
+# Put 3/4 of the data into the training set 
+data_split <- initial_split(flight_data, prop = 3/4)
+
+# Create data frames for the two sets:
+train_data <- training(data_split)
+test_data  <- testing(data_split)
+
+```
+
+```{r}
+flights_rec <- 
+  recipe(arr_delay ~ ., data = train_data) 
+
+
+flights_rec <- 
+  recipe(arr_delay ~ ., data = train_data) %>% 
+  update_role(flight, time_hour, new_role = "ID") 
+
+summary(flights_rec)
+
+```
+
+```{r}
+flight_data %>% 
+  distinct(date) %>% 
+  mutate(numeric_date = as.numeric(date)) 
+#> # A tibble: 364 x 2
+#>   date       numeric_date
+#>   <date>            <dbl>
+#> 1 2013-01-01        15706
+#> 2 2013-01-02        15707
+#> 3 2013-01-03        15708
+#> 4 2013-01-04        15709
+#> 5 2013-01-05        15710
+#> # … with 359 more rows
+
+```
+```{r}
+flights_rec <- 
+  recipe(arr_delay ~ ., data = train_data) %>% 
+  update_role(flight, time_hour, new_role = "ID") %>% 
+  step_date(date, features = c("dow", "month")) %>%               
+  step_holiday(date, holidays = timeDate::listHolidays("US")) %>% 
+  step_rm(date)
+
+```
+
+```{r}
+flights_rec <- 
+  recipe(arr_delay ~ ., data = train_data) %>% 
+  update_role(flight, time_hour, new_role = "ID") %>% 
+  step_date(date, features = c("dow", "month")) %>% 
+  step_holiday(date, holidays = timeDate::listHolidays("US")) %>% 
+  step_rm(date) %>% 
+  step_dummy(all_nominal(), -all_outcomes())
+
+```
+```{r}
+test_data %>% 
+  distinct(dest) %>% 
+  anti_join(train_data)
+#> Joining, by = "dest"
+#> # A tibble: 1 x 1
+#>   dest 
+#>   <fct>
+#> 1 LEX
+flights_rec <- 
+  recipe(arr_delay ~ ., data = train_data) %>% 
+  update_role(flight, time_hour, new_role = "ID") %>% 
+  step_date(date, features = c("dow", "month")) %>% 
+  step_holiday(date, holidays = timeDate::listHolidays("US")) %>% 
+  step_rm(date) %>% 
+  step_dummy(all_nominal(), -all_outcomes()) %>% 
+  step_zv(all_predictors())
+
+```
+
+```{r}
+lr_mod <- 
+  logistic_reg() %>% 
+  set_engine("glm")
+
+```
+
+```{r}
+flights_wflow <- 
+  workflow() %>% 
+  add_model(lr_mod) %>% 
+  add_recipe(flights_rec)
+
+```
+```{r}
+flights_fit <- 
+  flights_wflow %>% 
+  fit(data = train_data)
+
+```
+
+```{r}
+flights_fit %>% 
+  pull_workflow_fit() %>% 
+  tidy()
+
+```
+
+```{r}
+predict(flights_fit, test_data)
+
+```
+
+```{r}
+flights_pred <- 
+  predict(flights_fit, test_data, type = "prob") %>% 
+  bind_cols(test_data %>% select(arr_delay, time_hour, flight)) 
+
+# The data look like: 
+flights_pred
+#> # A tibble: 81,454 x 5
+#>   .pred_late .pred_on_time arr_delay time_hour           flight
+#>        <dbl>         <dbl> <fct>     <dttm>               <int>
+#> 1     0.0565         0.944 on_time   2013-01-01 05:00:00   1714
+#> 2     0.0264         0.974 on_time   2013-01-01 06:00:00     79
+#> 3     0.0481         0.952 on_time   2013-01-01 06:00:00    301
+#> 4     0.0325         0.967 on_time   2013-01-01 06:00:00     49
+#> 5     0.0711         0.929 on_time   2013-01-01 06:00:00   1187
+#> # … with 81,449 more rows
+
+```
+
+```{r}
+flights_pred %>% 
+  roc_curve(truth = arr_delay, .pred_late) %>% 
+  autoplot()
+
+```
+
+```{r}
+flights_pred %>% 
+  roc_auc(truth = arr_delay, .pred_late)
+#> # A tibble: 1 x 3
+#>   .metric .estimator .estimate
+#>   <chr>   <chr>          <dbl>
+#> 1 roc_auc binary         0.765
+
+```
+

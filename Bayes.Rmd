@@ -1,0 +1,72 @@
+---
+title: "Bayes"
+author: "Francisco"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document: 
+    theme: cerulean
+    highlight: breezedark
+    css: style.css
+    toc: yes
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(kableExtra)
+
+```
+
+# Teorema de Bayes
+
+$P(A|B) = \frac{P(B|A)P(A)}{P(B)} $
+
+```{r bayes}
+# Probabibilidad positivo (prevalencia población)
+PB <- 0.1
+# Probabilidad test positivo siendo positivo
+PA_dado_B <- 0.7
+# Probabilidad test positivo siendo negativo
+PA_dado_no_B <- 0.05
+# Probabilidad test positivo
+PA <- PA_dado_B * PB + PA_dado_no_B * (1-PB)
+# Probabilidad ser positivo si test sale positivo
+PB_dado_A = PA_dado_B * PB / PA
+
+PB_dado_A
+
+# kable resultados prevalencias
+test_positivo <- function(PB, PA_dado_B = 0.7, PA_dado_no_B = 0.05) {
+# Probabilidad test positivo
+PA <- PA_dado_B * PB + PA_dado_no_B * (1-PB)
+# Probabilidad ser positivo si test sale positivo
+PB_dado_A = PA_dado_B * PB / PA
+PB_dado_A  
+}
+
+prevalencias <- c(0.0001, 0.001, 0.005, 0.01, 0.05, 0.1, 0.2)
+test_p <- test_positivo(PB = prevalencias)
+
+tibble_prev <- tibble(prevalencias, test_p)
+
+kable(tibble_prev,
+      align = "c",
+      col.names = c("Prevalencia", "P(+)"),
+      caption = "Probabilidad de ser positivo ante una PCR positiva") %>%
+      kable_styling(bootstrap_options = c("striped", 
+                                      "hover", 
+                                      "condensed"),
+                full_width = F, fixed_thead = T)  %>%
+  # pack_rows("Identifier", 1, 1) %>%
+  # pack_rows("Outcomes", 2, 13) %>%
+  # pack_rows("Predictors (I)", 14, 151) %>%
+   row_spec(0, bold = T, color = "white", background = "red",
+           extra_css = "vertical-align:middle") %>%
+  add_footnote(notation = "none", "Nota: Cálculos para una prueba PCR con una sensibilidad del 70% y una especificidad del 95%")
+
+```
+
+

@@ -1,0 +1,173 @@
+---
+title: "Tidymodels"
+output: html_document
+---
+
+
+```{r setup, include=FALSE, echo=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+# Cargar librerías, funciones y Paths------------------------------------------
+w_dir <- file.path( "d:", "Users", "20833717H", "Desktop", "R_Projects")
+source(file.path(w_dir, "Opioids", "Scripts", "Funciones_Bases_de_Datos.R"))
+
+```
+
+```{r definir_plot, echo=FALSE, warning=FALSE, message=FALSE}
+# definir el estilo de los gráficos--------------------------------------------
+theme_set(theme_bw())
+tema_azul <- theme_update(
+  plot.background = element_rect(fill = "lightblue", colour = NA))
+
+# defnir cero días-------------------------------------------------------------
+zero_days = difftime(ymd("2000-01-01"), ymd("2000-01-01"), units = "days")
+
+```
+
+```{r}
+# cargar base -----------------------------------------------------------------
+urchins <- fread(file = file.path("datos", "urchins.csv")) %>% 
+  # Change the names to be a little more verbose
+  setNames(c("food_regime", "initial_volume", "width")) %>% 
+  # Factors are very helpful for modeling, so we convert one column
+  mutate(food_regime = factor(food_regime, levels = c("Initial", "Low", "High")))
+
+```
+
+```{r}
+ggplot(urchins,
+       aes(x = initial_volume, 
+           y = width, 
+           group = food_regime, 
+           col = food_regime)) + 
+  geom_point() + 
+  geom_smooth(method = lm, se = FALSE) +
+  scale_color_viridis_d(option = "plasma", end = .7)
+#> `geom_smooth()` using formula 'y ~ x'
+```
+
+```{r}
+lm_mod <- 
+  linear_reg() %>% 
+  set_engine("lm")
+
+lm_fit <- 
+  lm_mod %>% 
+  fit(width ~ initial_volume * food_regime, data = urchins)
+lm_fit
+
+tidy(lm_fit)
+
+```
+
+```{r}
+tidy(lm_fit) %>% 
+  dwplot(dot_args = list(size = 2, color = "black"),
+         whisker_args = list(color = "black"),
+         vline = geom_vline(xintercept = 0, colour = "grey50", linetype = 2))
+
+```
+
+```{r}
+new_points <- expand.grid(initial_volume = 20, 
+                          food_regime = c("Initial", "Low", "High"))
+new_points
+
+```
+
+
+```{r}
+mean_pred <- predict(lm_fit, new_data = new_points)
+mean_pred
+
+conf_int_pred <- predict(lm_fit, 
+                         new_data = new_points, 
+                         type = "conf_int")
+conf_int_pred
+#> # A tibble: 3 x 2
+#>   .pred_lower .pred_upper
+#>         <dbl>       <dbl>
+#> 1      0.0555      0.0729
+#> 2      0.0499      0.0678
+#> 3      0.0870      0.105
+
+# Now combine: 
+plot_data <- 
+  new_points %>% 
+  bind_cols(mean_pred) %>% 
+  bind_cols(conf_int_pred)
+
+# and plot:
+ggplot(plot_data, aes(x = food_regime)) + 
+  geom_point(aes(y = .pred)) + 
+  geom_errorbar(aes(ymin = .pred_lower, 
+                    ymax = .pred_upper),
+                width = .2) + 
+  labs(y = "urchin size")
+
+```
+
+```{r}
+# set the prior distribution
+prior_dist <- rstanarm::student_t(df = 1)
+
+set.seed(123)
+
+# make the parsnip model
+bayes_mod <-   
+  linear_reg() %>% 
+  set_engine("stan", 
+             prior_intercept = prior_dist, 
+             prior = prior_dist) 
+
+# train the model
+bayes_fit <- 
+  bayes_mod %>% 
+  fit(width ~ initial_volume * food_regime, data = urchins)
+
+print(bayes_fit, digits = 5)
+#> parsnip model object
+#> 
+#> Fit time:  8.5s 
+#> stan_glm
+#>  family:       gaussian [identity]
+#>  formula:      width ~ initial_volume * food_regime
+#>  observations: 72
+#>  predictors:   6
+#> ------
+#>                                Median   MAD_SD  
+#> (Intercept)                     0.03281  0.00992
+#> initial_volume                  0.00157  0.00041
+#> food_regimeLow                  0.01990  0.01286
+#> food_regimeHigh                 0.02136  0.01519
+#> initial_volume:food_regimeLow  -0.00126  0.00052
+#> initial_volume:food_regimeHigh  0.00052  0.00073
+#> 
+#> Auxiliary parameter(s):
+#>       Median  MAD_SD 
+#> sigma 0.02144 0.00192
+#> 
+#> ------
+#> * For help interpreting the printed output see ?print.stanreg
+#> * For info on the priors used see ?prior_summary.stanreg
+
+```
+
+```{r}
+tidy(bayes_fit, conf.int = TRUE)
+
+```
+
+```{r}
+bayes_plot_data <- 
+  new_points %>% 
+  bind_cols(predict(bayes_fit, new_data = new_points)) %>% 
+  bind_cols(predict(bayes_fit, new_data = new_points, type = "conf_int"))
+
+ggplot(bayes_plot_data, aes(x = food_regime)) + 
+  geom_point(aes(y = .pred)) + 
+  geom_errorbar(aes(ymin = .pred_lower, ymax = .pred_upper), width = .2) + 
+  labs(y = "urchin size") + 
+  ggtitle("Bayesian model with t(1) prior distribution")
+
+```
+

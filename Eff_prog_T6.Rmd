@@ -1,0 +1,60 @@
+---
+title: "Efficient R programming"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library("tibble")
+library("tidyr")
+library("stringr")
+library("readr")
+library("dplyr")
+library("data.table")
+
+```
+
+
+```{r}
+df_base = data.frame(colA = "A")
+
+print(df_base)
+df_base$colA
+df_base$col
+df_base$colB
+
+```
+
+```{r}
+install.packages("efficient")
+data("ghg_ems", package = "efficient")
+top_table =
+  ghg_ems %>%
+  filter(!grepl("World|Europe", Country)) %>% 
+  group_by(Country) %>% 
+  summarise(Mean = mean(Transportation),
+            Growth = diff(range(Transportation))) %>%
+  top_n(3, Growth) %>%
+  arrange(desc(Growth))
+
+```
+
+
+```{r}
+library("parallel")
+no_of_cores = detectCores()
+
+```
+
+```{r}
+benchmarkme::get_ram()
+.Machine$sizeof.pointer
+
+library(benchmarkme)
+res <- benchmark_std() 
+
+plot(res)
+
+```
+

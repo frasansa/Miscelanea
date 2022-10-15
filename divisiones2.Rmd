@@ -1,0 +1,78 @@
+---
+title: "Divisiones"
+author: "Francisco"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document: 
+    theme: cerulean
+    highlight: breezedark
+    css: style.css
+    toc: yes
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(kableExtra)
+
+```
+
+# Números con solución
+
+***
+
+<br>
+
+```{r sin_solucion}
+# fijar semilla
+set.seed(11)
+# Números sin solución
+numeros <- 1:99999999
+# Desordenar números
+numeros_random <- sample(numeros, size = 3650, replace = FALSE)
+
+tibble_num_sin <- tibble(numeros_random)
+
+# rmarkdown::paged_table(tibble_num_sin, list(max.print = 3650, align = "c"))
+
+```
+
+```{r con_solucion}
+# Números sin solución
+tibble_num <- tibble_num_sin %>% 
+  mutate(restos = numeros_random %% 23,
+         letras = map_chr(restos, ~case_when(.x == 0 ~ "T",
+                                            .x == 1 ~ "R",
+                                            .x == 2 ~ "W",
+                                            .x == 3 ~ "A",
+                                            .x == 4 ~ "G",
+                                            .x == 5 ~ "M",
+                                            .x == 6 ~ "Y",
+                                            .x == 7 ~ "F",
+                                            .x == 8 ~ "P",
+                                            .x == 9 ~ "D",
+                                            .x == 10 ~ "X",
+                                            .x == 11 ~ "B",
+                                            .x == 12 ~ "N",
+                                            .x == 13 ~ "J",
+                                            .x == 14 ~ "Z",
+                                            .x == 15 ~ "S",
+                                            .x == 16 ~ "Q",
+                                            .x == 17 ~ "V",
+                                            .x == 18 ~ "H",
+                                            .x == 19 ~ "L",
+                                            .x == 20 ~ "C",
+                                            .x == 21 ~ "K",
+                                            .x == 22 ~ "E"))) 
+
+rmarkdown::paged_table(tibble_num, list(max.print = 3650, align = "c"))
+
+```
+
+<br>
+
+<div class="tocify-extend-page" data-unique="tocify-extend-page" style="height: 0;"></div>
+
